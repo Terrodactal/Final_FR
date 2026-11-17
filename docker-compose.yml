@@ -27,7 +27,7 @@ services:
       TRACKING_URL: http://inventory-service:5004
       PRODUCT_URL: http://catalog-service:5003
       INBOUND_URL: http://inbound-service:5006
-      USER_URL: http://tracking-service:5007
+      USER_URL: http://userprofile-service:5007
 
   login-service:
     container_name: login_microservice
@@ -101,3 +101,15 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5004
+
+  userprofile-service:
+    container_name: userprofile_microservice
+    build:
+      context: ./UserProfile_microservice
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5007:5007"
+    environment:
+      NODE_ENV: production
+      PORT: 5007

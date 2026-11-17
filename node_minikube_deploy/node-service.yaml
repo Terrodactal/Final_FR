@@ -1,26 +1,103 @@
+# Services for Logistics Microservices
+# API Gateway is exposed via NodePort & Ingress
+# Backend microservices are strictly internal ClusterIP services
 apiVersion: v1
 kind: Service
 metadata:
-  name: apigateway-login-service
+  name: api-gateway-service
+  labels:
+    app: api-gateway-service
 spec:
   type: NodePort
   ports:
-    - targetPort: 4000
-      port: 80
-      nodePort: 30001
+    - port: 4000
+      targetPort: 4000
+      nodePort: 30080
+      protocol: TCP
+      name: http
   selector:
-    release: beta
-    type: gateway-poc
+    app: api-gateway-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: registration-service
 spec:
-  # Internal service (ClusterIP by default) so the Gateway can talk to Registration
+  type: ClusterIP
   ports:
-    - targetPort: 5001
-      port: 5001
+    - port: 5001
+      targetPort: 5001
   selector:
-    release: beta
-    type: registration-poc
+    app: registration-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: login-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5002
+      targetPort: 5002
+  selector:
+    app: login-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5003
+      targetPort: 5003
+  selector:
+    app: catalog-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5004
+      targetPort: 5004
+  selector:
+    app: inventory-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5005
+      targetPort: 5005
+  selector:
+    app: order-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inbound-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5006
+      targetPort: 5006
+  selector:
+    app: inbound-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userprofile-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5007
+      targetPort: 5007
+  selector:
+    app: userprofile-service

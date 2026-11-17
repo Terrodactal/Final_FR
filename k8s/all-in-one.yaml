@@ -1,0 +1,671 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: logistics-secrets
+type: Opaque
+stringData:
+  MONGO_URI: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+  JWT_SECRETE: "347186591486#^%%ABCF*##GHE"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logistics-config
+data:
+  NODE_ENV: "production"
+  REGISTRATION_URL: "http://registration-service:5001"
+  LOGIN_URL: "http://login-service:5002"
+  PRODUCT_URL: "http://catalog-service:5003"
+  TRACKING_URL: "http://inventory-service:5004"
+  ORDER_URL: "http://order-service:5005"
+  INBOUND_URL: "http://inbound-service:5006"
+  USER_URL: "http://userprofile-service:5007"
+  LOG_DIR: "/var/log/app"
+  LOG_FILE_PATH: "/var/log/app/gateway.log"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: app-logs-pv
+  labels:
+    type: local
+    app: logistics-system
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/data/logistics-logs"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-logs-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+# ==============================================================================
+# 1. REGISTRATION MICROSERVICE (Port 5001 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registration-deployment
+  labels:
+    app: registration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: registration-service
+  template:
+    metadata:
+      labels:
+        app: registration-service
+    spec:
+      containers:
+        - name: registration-container
+          image: logistics-registration:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5001
+          env:
+            - name: PORT
+              value: "5001"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registration-service
+  labels:
+    app: registration-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5001
+      targetPort: 5001
+  selector:
+    app: registration-service
+---
+# ==============================================================================
+# 2. LOGIN MICROSERVICE (Port 5002 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: login-deployment
+  labels:
+    app: login-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: login-service
+  template:
+    metadata:
+      labels:
+        app: login-service
+    spec:
+      containers:
+        - name: login-container
+          image: logistics-login:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5002
+          env:
+            - name: PORT
+              value: "5002"
+            - name: JWT_SECRETE
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: JWT_SECRETE
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: login-service
+  labels:
+    app: login-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5002
+      targetPort: 5002
+  selector:
+    app: login-service
+---
+# ==============================================================================
+# 3. PRODUCT CATALOG MICROSERVICE (Port 5003 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-deployment
+  labels:
+    app: catalog-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      containers:
+        - name: catalog-container
+          image: logistics-catalog:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5003
+          env:
+            - name: PORT
+              value: "5003"
+            - name: TRACKING_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: logistics-config
+                  key: TRACKING_URL
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  labels:
+    app: catalog-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5003
+      targetPort: 5003
+  selector:
+    app: catalog-service
+---
+# ==============================================================================
+# 4. INVENTORY TRACKING MICROSERVICE (Port 5004 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-deployment
+  labels:
+    app: inventory-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        - name: inventory-container
+          image: logistics-inventory:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5004
+          env:
+            - name: PORT
+              value: "5004"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  labels:
+    app: inventory-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5004
+      targetPort: 5004
+  selector:
+    app: inventory-service
+---
+# ==============================================================================
+# 5. ORDER FULFILLMENT MICROSERVICE (Port 5005 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-deployment
+  labels:
+    app: order-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-container
+          image: logistics-order:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5005
+          env:
+            - name: PORT
+              value: "5005"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  labels:
+    app: order-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5005
+      targetPort: 5005
+  selector:
+    app: order-service
+---
+# ==============================================================================
+# 6. INBOUND RECEIVING MICROSERVICE (Port 5006 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inbound-deployment
+  labels:
+    app: inbound-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inbound-service
+  template:
+    metadata:
+      labels:
+        app: inbound-service
+    spec:
+      containers:
+        - name: inbound-container
+          image: logistics-inbound:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5006
+          env:
+            - name: PORT
+              value: "5006"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inbound-service
+  labels:
+    app: inbound-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5006
+      targetPort: 5006
+  selector:
+    app: inbound-service
+---
+# ==============================================================================
+# 7. USER PROFILE MICROSERVICE (Port 5007 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userprofile-deployment
+  labels:
+    app: userprofile-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: userprofile-service
+  template:
+    metadata:
+      labels:
+        app: userprofile-service
+    spec:
+      containers:
+        - name: userprofile-container
+          image: logistics-userprofile:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5007
+          env:
+            - name: PORT
+              value: "5007"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userprofile-service
+  labels:
+    app: userprofile-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5007
+      targetPort: 5007
+  selector:
+    app: userprofile-service
+---
+# ==============================================================================
+# API GATEWAY DEPLOYMENT (Multi-container Pod with Shared Volume)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apigateway-deployment
+  labels:
+    app: api-gateway-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway-service
+  template:
+    metadata:
+      labels:
+        app: api-gateway-service
+    spec:
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        - name: init-volume-permissions
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - "sh"
+            - "-c"
+            - "chmod -R 777 /var/log/app && chown -R 1000:1000 /var/log/app"
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/app
+      containers:
+        # Container 1: API Gateway Microservice
+        - name: api-gateway-container
+          image: logistics-api-gateway:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef:
+                name: logistics-config
+          env:
+            - name: PORT
+              value: "4000"
+            - name: JWT_SECRETE
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: JWT_SECRETE
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/app
+
+        # Container 2: Logging Sidecar (Demonstrates multi-container shared volume access)
+        - name: log-sidecar-container
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - "sh"
+            - "-c"
+            - "echo '=== Log Sidecar Started: Monitoring /var/log/app/gateway.log ===' && touch /var/log/app/gateway.log && tail -n +1 -F /var/log/app/gateway.log"
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/app
+
+      volumes:
+        - name: shared-logs
+          persistentVolumeClaim:
+            claimName: app-logs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-service
+  labels:
+    app: api-gateway-service
+spec:
+  type: NodePort
+  ports:
+    - port: 4000
+      targetPort: 4000
+      nodePort: 30080
+      protocol: TCP
+      name: http
+  selector:
+    app: api-gateway-service
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ims-fanout-ingress
+  annotations:
+    ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ims.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /register
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /login
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /logout
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /products
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /inventory
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /orders
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /shipments
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /viewprofile
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /updateprofile
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /logs
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+    - host: ims
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /register
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /login
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /logout
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /products
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /inventory
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /orders
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /shipments
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /viewprofile
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /updateprofile
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /logs
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway-service
+                port:
+                  number: 4000

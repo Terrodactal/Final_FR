@@ -1,0 +1,345 @@
+# ==============================================================================
+# 1. REGISTRATION MICROSERVICE (Port 5001 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registration-deployment
+  labels:
+    app: registration-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: registration-service
+  template:
+    metadata:
+      labels:
+        app: registration-service
+    spec:
+      containers:
+        - name: registration-container
+          image: logistics-registration:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5001
+          env:
+            - name: PORT
+              value: "5001"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registration-service
+  labels:
+    app: registration-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5001
+      targetPort: 5001
+  selector:
+    app: registration-service
+---
+# ==============================================================================
+# 2. LOGIN MICROSERVICE (Port 5002 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: login-deployment
+  labels:
+    app: login-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: login-service
+  template:
+    metadata:
+      labels:
+        app: login-service
+    spec:
+      containers:
+        - name: login-container
+          image: logistics-login:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5002
+          env:
+            - name: PORT
+              value: "5002"
+            - name: JWT_SECRETE
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: JWT_SECRETE
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: login-service
+  labels:
+    app: login-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5002
+      targetPort: 5002
+  selector:
+    app: login-service
+---
+# ==============================================================================
+# 3. PRODUCT CATALOG MICROSERVICE (Port 5003 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-deployment
+  labels:
+    app: catalog-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      containers:
+        - name: catalog-container
+          image: logistics-catalog:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5003
+          env:
+            - name: PORT
+              value: "5003"
+            - name: TRACKING_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: logistics-config
+                  key: TRACKING_URL
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  labels:
+    app: catalog-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5003
+      targetPort: 5003
+  selector:
+    app: catalog-service
+---
+# ==============================================================================
+# 4. INVENTORY TRACKING MICROSERVICE (Port 5004 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-deployment
+  labels:
+    app: inventory-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        - name: inventory-container
+          image: logistics-inventory:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5004
+          env:
+            - name: PORT
+              value: "5004"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  labels:
+    app: inventory-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5004
+      targetPort: 5004
+  selector:
+    app: inventory-service
+---
+# ==============================================================================
+# 5. ORDER FULFILLMENT MICROSERVICE (Port 5005 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-deployment
+  labels:
+    app: order-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-container
+          image: logistics-order:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5005
+          env:
+            - name: PORT
+              value: "5005"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  labels:
+    app: order-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5005
+      targetPort: 5005
+  selector:
+    app: order-service
+---
+# ==============================================================================
+# 6. INBOUND RECEIVING MICROSERVICE (Port 5006 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inbound-deployment
+  labels:
+    app: inbound-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inbound-service
+  template:
+    metadata:
+      labels:
+        app: inbound-service
+    spec:
+      containers:
+        - name: inbound-container
+          image: logistics-inbound:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5006
+          env:
+            - name: PORT
+              value: "5006"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inbound-service
+  labels:
+    app: inbound-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5006
+      targetPort: 5006
+  selector:
+    app: inbound-service
+---
+# ==============================================================================
+# 7. USER PROFILE MICROSERVICE (Port 5007 - ClusterIP)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userprofile-deployment
+  labels:
+    app: userprofile-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: userprofile-service
+  template:
+    metadata:
+      labels:
+        app: userprofile-service
+    spec:
+      containers:
+        - name: userprofile-container
+          image: logistics-userprofile:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5007
+          env:
+            - name: PORT
+              value: "5007"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: logistics-secrets
+                  key: MONGO_URI
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userprofile-service
+  labels:
+    app: userprofile-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5007
+      targetPort: 5007
+  selector:
+    app: userprofile-service

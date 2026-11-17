@@ -12,6 +12,6 @@ const PersonSchema = schema_mongoose.Schema(
     {
        timestamps: true
     }
-    );
+);
 
-module.exports = schema_mongoose.model('Members', PersonSchema);
+module.exports = schema_mongoose.model('Members', PersonSchema, 'members');

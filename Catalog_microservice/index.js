@@ -1,16 +1,19 @@
 const express = require('express');
-const mongoose = require('mongoose'); // Needed for MongoDB operations
-require('dotenv').config(); // Needed to load your MONGO_URI
+const mongoose = require('mongoose');
+require('dotenv').config();
 
 const app = express();
-app.use(express.json()); // Essential: Allows your app to read JSON from Postman
+app.use(express.json());
+
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0";
+const PORT = process.env.PORT || 5003;
 
 // 1. Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(MONGO_URI)
   .then(() => console.log('Product Catalog Service Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// 2. Define the Product Schema (matching your DB)
+// 2. Define the Product Schema
 const productSchema = new mongoose.Schema({
   sku: { type: String, required: true, unique: true },
   name: { type: String, required: true },
@@ -19,54 +22,70 @@ const productSchema = new mongoose.Schema({
   category: { type: String }
 });
 
-// The third parameter 'Catalog' maps this directly to the Catalog collection in your MongoDB
 const Product = mongoose.model('Product', productSchema, 'Catalog');
+
+app.get('/health', (req, res) => res.status(200).json({ status: 'UP', service: 'Catalog Service' }));
 
 // --- APIs ---
 
 // CREATE API - POST /products (Manager only)
 app.post('/products', async (req, res) => {
   try {
-    // Inserts a new product definition into the database based on Postman's body
+    if (!req.body.sku || !req.body.name || req.body.price === undefined) {
+      return res.status(400).json({ error: "sku, name, and price are required" });
+    }
+
+    // Defensive check for duplicate SKU
+    const existing = await Product.findOne({ sku: req.body.sku });
+    if (existing) {
+      return res.status(400).json({ error: "Product SKU already exists" });
+    }
+
     const newProduct = new Product({
       sku: req.body.sku,
       name: req.body.name,
-      description: req.body.description,
+      description: req.body.description || '',
       price: req.body.price,
-      category: req.body.category
+      category: req.body.category || 'General'
     });
     
     const savedProduct = await newProduct.save();
-    res.status(201).json(savedProduct);
+    return res.status(201).json(savedProduct);
   } catch (error) {
-    res.status(500).json({ error: "Server Error" });
+    console.error("Create Product Error:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ error: "Product SKU already exists" });
+    }
+    return res.status(500).json({ error: error.message || "Server Error" });
   }
 });
 
 // READ API - GET /products/:id (Manager & Worker)
 app.get('/products/:id', async (req, res) => {
   try {
-    // 1. Get the product metadata from the Catalog database
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: "Product Not Found" });
+    }
+
     const product = await Product.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({ message: "Product Not Found" });
     }
 
-    // 2. Make an HTTP call to your Inventory Microservice (Port 5004)
+    // Call Inventory Microservice (Port 5004)
     let availableQuantity = 0;
     try {
-      const trackingUrl = process.env.TRACKING_URL || 'http://localhost:5004';
+      const trackingUrl = process.env.TRACKING_URL || 'http://inventory-service:5004';
       const inventoryResponse = await fetch(`${trackingUrl}/inventory/${product.sku}`);
       if (inventoryResponse.ok) {
         const inventoryData = await inventoryResponse.json();
-        availableQuantity = inventoryData.quantity; // Extract the quantity
+        availableQuantity = inventoryData.quantity !== undefined ? inventoryData.quantity : 0;
       }
     } catch (inventoryError) {
       console.log("Could not reach Inventory service. Defaulting to 0.");
     }
 
-    // 3. Combine the Product data with the Inventory quantity
     const combinedResponse = {
       _id: product._id,
       sku: product.sku,
@@ -74,35 +93,40 @@ app.get('/products/:id', async (req, res) => {
       description: product.description,
       price: product.price,
       category: product.category,
-      availableStock: availableQuantity // Now displays the live inventory count!
+      availableStock: availableQuantity
     };
 
-    res.status(200).json(combinedResponse);
+    return res.status(200).json(combinedResponse);
   } catch (error) {
-    res.status(500).json({ error: "Server Error" });
+    console.error("Get Product Error:", error);
+    return res.status(500).json({ error: error.message || "Server Error" });
   }
 });
 
 // UPDATE API - PUT /products/:id (Manager only)
 app.put('/products/:id', async (req, res) => {
   try {
-    // Finds the exact product by ID and updates its details in one step using the request body
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: "Product Not Found to Update" });
+    }
+
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id, 
       req.body, 
-      { new: true } // Returns the updated document
+      { new: true }
     );
 
     if (!updatedProduct) {
       return res.status(404).json({ message: "Product Not Found to Update" });
     }
-    res.status(200).json({ message: "Product successfully updated", product: updatedProduct });
+    return res.status(200).json({ message: "Product successfully updated", product: updatedProduct });
   } catch (error) {
-    res.status(500).json({ error: "Server Error" });
+    console.error("Update Product Error:", error);
+    return res.status(500).json({ error: error.message || "Server Error" });
   }
 });
 
-// START THE EXPRESS SERVER.
-app.listen(5003, () => 
-  console.log('EXPRESS Server Started at Port No: 5003')
+// START THE EXPRESS SERVER
+app.listen(PORT, () => 
+  console.log(`EXPRESS Server Started at Port No: ${PORT}`)
 );

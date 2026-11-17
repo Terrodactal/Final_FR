@@ -7,11 +7,12 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 
-const JWT_SECRETE = process.env.JWT_SECRETE;
-const MONGO_URI = process.env.MONGO_URI; 
+const JWT_SECRETE = process.env.JWT_SECRETE || "347186591486#^%%ABCF*##GHE";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"; 
+const PORT = process.env.PORT || 5002;
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => console.log('Authentication Service Connected to MongoDB Atlas'))
   .catch(err => console.error('MongoDB connection error:', err));
 
 const userSchema = new mongoose.Schema({
@@ -22,8 +23,16 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema, 'members');
 
+app.get('/health', (req, res) => res.status(200).json({ status: 'UP', service: 'Login Service' }));
+
 app.post("/login", async (req, res) => {
-    const { emailid, password, role } = req.body;
+    const emailid = req.body.emailid || req.body.email;
+    const password = req.body.password || req.body.pass;
+    const role = req.body.role;
+
+    if (!emailid || !password) {
+        return res.status(400).send("Invalid credentials or role");
+    }
 
     try {
         const user = await User.findOne({ emailid: emailid });
@@ -34,7 +43,7 @@ app.post("/login", async (req, res) => {
         }
 
         // Check if the provided role matches the database role
-        if (user.role !== role) {
+        if (role && user.role !== role) {
             console.log(`[LOGIN FAILED] Email: "${emailid}" - Reason: Role mismatch (Provided: "${role}", Expected: "${user.role}").`);
             return res.status(400).send("Invalid credentials or role");
         }
@@ -46,7 +55,7 @@ app.post("/login", async (req, res) => {
             return res.status(400).send("Invalid credentials or role");
         }
 
-        console.log(`[LOGIN SUCCESS] Email: "${emailid}" with role "${role}" logged in successfully.`);
+        console.log(`[LOGIN SUCCESS] Email: "${emailid}" with role "${user.role}" logged in successfully.`);
         const token = jwt.sign({ emailid: user.emailid, role: user.role }, JWT_SECRETE, { expiresIn: '24h' });
         return res.json({ token });
         
@@ -56,6 +65,10 @@ app.post("/login", async (req, res) => {
     }
 });
 
-app.listen(5002, () => {
-    console.log('Authentication Service Server is running on PORT NO: 5002');
+app.post("/logout", (req, res) => {
+    return res.status(200).json({ message: "Logged out successfully" });
+});
+
+app.listen(PORT, () => {
+    console.log(`Authentication Service Server is running on PORT NO: ${PORT}`);
 });

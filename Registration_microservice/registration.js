@@ -8,64 +8,58 @@ app.use(bodyParser.json());
 const dbconnect = require('./dbconnect.js');
 const PersonModel = require('./person_schema.js');
 
-/*
-In the postman use the following URL
-localhost:5000/reg
-
-{
-  "name":"Joe",
-  "email":"a@gmail.com",
-  "password":"abc",
-  "mobile": 12345678,
-  "role": "student"
-}
-
-*/
+const PORT = process.env.PORT || 5001;
 
 function uniqueid(min, max) {
   return Math.floor(
     Math.random() * (max - min + 1) + min
-  )
+  );
 }
 
-//REG API
+app.get('/health', (req, res) => res.status(200).json({ status: 'UP', service: 'Registration Service' }));
+
+// REG API
 app.post('/register', async (req, res) => {
   console.log("REG API EXECUTED");
   
   try {
+    const email = req.body.email || req.body.emailid;
+    if (!email) {
+      return res.status(400).send('Email is required');
+    }
+
+    const password = req.body.password || req.body.pass;
+    if (!password) {
+      return res.status(400).send('Password is required');
+    }
+
     // Check if user with this email already exists
-    const existingUser = await PersonModel.findOne({ emailid: req.body.email });
+    const existingUser = await PersonModel.findOne({ emailid: email });
     if (existingUser) {
       return res.status(400).send('EMAIL ALREADY EXISTS IN DATABASE');
     }
 
     // Generate a salt and hash the password
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const pobj = new PersonModel({
       id: uniqueid(1000, 9999),
       name: req.body.name,
-      emailid: req.body.email,
+      emailid: email,
       pass: hashedPassword,
       mobile: req.body.mobile,
-      role: req.body.role
-    });//CLOSE PersonModel
-  
-    //INSERT/SAVE THE RECORD/DOCUMENT
-    pobj.save()
-      .then(inserteddocument => {
-        res.status(200).send('DOCUMENT INSERTED IN MONGODB DATABASE');
-      })//CLOSE THEN
-      .catch(err => {
-        res.status(500).send({ message: err.message || 'Error in Employee Save ' })
-      });//CLOSE CATCH
+      role: req.body.role || 'Worker'
+    });
+
+    // INSERT/SAVE THE RECORD/DOCUMENT
+    await pobj.save();
+    return res.status(200).send('DOCUMENT INSERTED IN MONGODB DATABASE');
 
   } catch (error) {
     console.error("Error during registration:", error);
-    res.status(500).send({ message: 'Internal server error during registration' });
+    return res.status(500).send({ message: error.message || 'Internal server error during registration' });
   }
-});//CLOSE POST METHOD
+});
 
-// START THE EXPRESS SERVER. 5001 is the PORT NUMBER
-app.listen(5001, () => console.log('EXPRESS Server Started at Port No: 5001'));
+app.listen(PORT, () => console.log(`EXPRESS Server Started at Port No: ${PORT}`));

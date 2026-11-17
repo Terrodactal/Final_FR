@@ -1,37 +1,58 @@
+# Kubernetes Deployments for Logistics Microservices
+# All backend services + Multi-container API Gateway with Volume Mount
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: registration-deployment
   labels:
-    release: beta
-    type: gateway-poc
-  name: apigateway-login-deployment
+    app: registration-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      type: gateway-poc
+      app: registration-service
   template:
     metadata:
       labels:
-        release: beta
-        type: gateway-poc
-        name: gateway-login-pod
+        app: registration-service
     spec:
       containers:
-        - image: "choupvirakyuth/api-act9:v1.0"
-          name: api-gateway-container
+        - name: registration-container
+          image: logistics-registration:v1.0
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 4000
+            - containerPort: 5001
           env:
-            - name: LOGIN_URL
-              value: "http://localhost:5002"
-            - name: REGISTRATION_URL
-              value: "http://registration-service:5001"
-        - image: "choupvirakyuth/loginact9:v1.0"
-          name: login-container
+            - name: PORT
+              value: "5001"
+            - name: MONGO_URI
+              value: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: login-deployment
+  labels:
+    app: login-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: login-service
+  template:
+    metadata:
+      labels:
+        app: login-service
+    spec:
+      containers:
+        - name: login-container
+          image: logistics-login:v1.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5002
           env:
+            - name: PORT
+              value: "5002"
             - name: JWT_SECRETE
               value: "347186591486#^%%ABCF*##GHE"
             - name: MONGO_URI
@@ -40,24 +61,222 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: catalog-deployment
   labels:
-    release: beta
-    type: registration-poc
-  name: registration-deployment
+    app: catalog-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      type: registration-poc
+      app: catalog-service
   template:
     metadata:
       labels:
-        release: beta
-        type: registration-poc
-        name: registration-pod
+        app: catalog-service
     spec:
       containers:
-        - image: "choupvirakyuth/regact9:v1.0"
-          name: registration-container
+        - name: catalog-container
+          image: logistics-catalog:v1.0
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 5001
+            - containerPort: 5003
+          env:
+            - name: PORT
+              value: "5003"
+            - name: TRACKING_URL
+              value: "http://inventory-service:5004"
+            - name: MONGO_URI
+              value: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-deployment
+  labels:
+    app: inventory-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      containers:
+        - name: inventory-container
+          image: logistics-inventory:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5004
+          env:
+            - name: PORT
+              value: "5004"
+            - name: MONGO_URI
+              value: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-deployment
+  labels:
+    app: order-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-container
+          image: logistics-order:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5005
+          env:
+            - name: PORT
+              value: "5005"
+            - name: MONGO_URI
+              value: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inbound-deployment
+  labels:
+    app: inbound-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inbound-service
+  template:
+    metadata:
+      labels:
+        app: inbound-service
+    spec:
+      containers:
+        - name: inbound-container
+          image: logistics-inbound:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5006
+          env:
+            - name: PORT
+              value: "5006"
+            - name: MONGO_URI
+              value: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userprofile-deployment
+  labels:
+    app: userprofile-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: userprofile-service
+  template:
+    metadata:
+      labels:
+        app: userprofile-service
+    spec:
+      containers:
+        - name: userprofile-container
+          image: logistics-userprofile:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5007
+          env:
+            - name: PORT
+              value: "5007"
+            - name: MONGO_URI
+              value: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+---
+# Multi-container API Gateway Pod with Shared Volume
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apigateway-deployment
+  labels:
+    app: api-gateway-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-gateway-service
+  template:
+    metadata:
+      labels:
+        app: api-gateway-service
+    spec:
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        - name: init-volume-permissions
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - "sh"
+            - "-c"
+            - "chmod -R 777 /var/log/app && chown -R 1000:1000 /var/log/app"
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/app
+      containers:
+        # Container 1: API Gateway Service
+        - name: api-gateway-container
+          image: logistics-api-gateway:v1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: JWT_SECRETE
+              value: "347186591486#^%%ABCF*##GHE"
+            - name: REGISTRATION_URL
+              value: "http://registration-service:5001"
+            - name: LOGIN_URL
+              value: "http://login-service:5002"
+            - name: PRODUCT_URL
+              value: "http://catalog-service:5003"
+            - name: TRACKING_URL
+              value: "http://inventory-service:5004"
+            - name: ORDER_URL
+              value: "http://order-service:5005"
+            - name: INBOUND_URL
+              value: "http://inbound-service:5006"
+            - name: USER_URL
+              value: "http://userprofile-service:5007"
+            - name: LOG_DIR
+              value: "/var/log/app"
+            - name: LOG_FILE_PATH
+              value: "/var/log/app/gateway.log"
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/app
+
+        # Container 2: Logging Sidecar
+        - name: log-sidecar-container
+          image: busybox:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - "sh"
+            - "-c"
+            - "echo '=== Log Sidecar Started ===' && touch /var/log/app/gateway.log && tail -n +1 -F /var/log/app/gateway.log"
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /var/log/app
+
+      volumes:
+        - name: shared-logs
+          persistentVolumeClaim:
+            claimName: app-logs-pvc

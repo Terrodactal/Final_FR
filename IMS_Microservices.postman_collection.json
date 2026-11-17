@@ -1,0 +1,618 @@
+{
+	"info": {
+		"_postman_id": "8a72b123-5e92-4d1a-a63b-967a14cb3510",
+		"name": "IMS Microservices API (ims.com)",
+		"description": "Postman Collection for Microservices-based Logistics & Inventory Management System.\nBase URL: http://ims.com (routed via Kubernetes Fanout Ingress to API Gateway).\nContains all positive and negative test cases covering RBAC, JWT Auth, and Cloud MongoDB.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://ims.com",
+			"type": "string"
+		},
+		{
+			"key": "managerToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "workerToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "productId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "orderId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "shipmentId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Gateway & Shared Logs",
+			"item": [
+				{
+					"name": "Gateway Info (GET /)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/",
+							"host": ["{{baseUrl}}"],
+							"path": [""]
+						}
+					}
+				},
+				{
+					"name": "Health Check (GET /health)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["health"]
+						}
+					}
+				},
+				{
+					"name": "Shared Volume Logs (GET /logs)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/logs",
+							"host": ["{{baseUrl}}"],
+							"path": ["logs"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Registration & Authentication",
+			"item": [
+				{
+					"name": "Register Manager (POST /register)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Alice Manager\",\n    \"email\": \"manager_ims@logistics.com\",\n    \"password\": \"managerpass123\",\n    \"role\": \"Manager\",\n    \"mobile\": 9876543210\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Register Worker (POST /register)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Bob Worker\",\n    \"email\": \"worker_ims@logistics.com\",\n    \"password\": \"workerpass123\",\n    \"role\": \"Worker\",\n    \"mobile\": 9123456780\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["register"]
+						}
+					}
+				},
+				{
+					"name": "Login Manager (POST /login)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set('managerToken', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"emailid\": \"manager_ims@logistics.com\",\n    \"pass\": \"managerpass123\",\n    \"role\": \"Manager\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Login Worker (POST /login)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set('workerToken', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"emailid\": \"worker_ims@logistics.com\",\n    \"pass\": \"workerpass123\",\n    \"role\": \"Worker\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Negative - Wrong Password (POST /login)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"emailid\": \"manager_ims@logistics.com\",\n    \"pass\": \"WrongPass999\",\n    \"role\": \"Manager\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["login"]
+						}
+					}
+				},
+				{
+					"name": "Logout (POST /logout)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Catalog & Inventory",
+			"item": [
+				{
+					"name": "Create Product - Manager (POST /products)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData._id) {",
+									"    pm.collectionVariables.set('productId', jsonData._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sku\": \"PROD-IMS-001\",\n    \"name\": \"Industrial Barcode Scanner\",\n    \"category\": \"Warehouse Hardware\",\n    \"price\": 299.99,\n    \"description\": \"High-speed wireless 2D barcode imager\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				},
+				{
+					"name": "Get Inventory SKU (GET /inventory/:sku)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{workerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/inventory/PROD-IMS-001",
+							"host": ["{{baseUrl}}"],
+							"path": ["inventory", "PROD-IMS-001"]
+						}
+					}
+				},
+				{
+					"name": "Adjust Stock - Worker (PUT /inventory/:sku/adjust)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{workerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"quantity\": 150,\n    \"location\": \"Rack-C3-Bin4\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/inventory/PROD-IMS-001/adjust",
+							"host": ["{{baseUrl}}"],
+							"path": ["inventory", "PROD-IMS-001", "adjust"]
+						}
+					}
+				},
+				{
+					"name": "Get Product with Live Stock (GET /products/:id)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/products/{{productId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["products", "{{productId}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Product - Manager (PUT /products/:id)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"price\": 319.99,\n    \"description\": \"Upgraded Rugged Barcode Scanner\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products/{{productId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["products", "{{productId}}"]
+						}
+					}
+				},
+				{
+					"name": "Negative - Worker Blocked from Creating Product (POST /products)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{workerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sku\": \"BLOCKED-01\",\n    \"name\": \"Test Item\",\n    \"category\": \"Test\",\n    \"price\": 10.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["products"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Order Fulfillment",
+			"item": [
+				{
+					"name": "Create Order - Manager (POST /orders)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData._id) {",
+									"    pm.collectionVariables.set('orderId', jsonData._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"orderId\": \"ORD-IMS-5001\",\n    \"customerName\": \"Acrobatics Logistics Hub\",\n    \"items\": [\n        {\n            \"sku\": \"PROD-IMS-001\",\n            \"quantity\": 10,\n            \"price\": 299.99\n        }\n    ],\n    \"totalAmount\": 2999.90\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["orders"]
+						}
+					}
+				},
+				{
+					"name": "Get Pending Orders - Worker (GET /orders/pending)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{workerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/pending",
+							"host": ["{{baseUrl}}"],
+							"path": ["orders", "pending"]
+						}
+					}
+				},
+				{
+					"name": "Update Order Status to Picked - Worker (PUT /orders/:id/status)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{workerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"picked\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{orderId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["orders", "{{orderId}}", "status"]
+						}
+					}
+				},
+				{
+					"name": "Update Order Status to Packed - Worker (PUT /orders/:id/status)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{workerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"packed\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{orderId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["orders", "{{orderId}}", "status"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Inbound Receiving",
+			"item": [
+				{
+					"name": "Create Inbound Shipment - Manager (POST /shipments)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData._id) {",
+									"    pm.collectionVariables.set('shipmentId', jsonData._id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"shipmentId\": \"SHIP-IMS-7001\",\n    \"supplier\": \"Global ScanTech Inc.\",\n    \"items\": [\n        {\n            \"sku\": \"PROD-IMS-001\",\n            \"expectedQuantity\": 50\n        }\n    ],\n    \"carrier\": \"DHL Express\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shipments",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments"]
+						}
+					}
+				},
+				{
+					"name": "Verify Inbound Shipment - Worker (PUT /shipments/:id/verify)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{workerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"receivedItems\": [\n        {\n            \"sku\": \"PROD-IMS-001\",\n            \"receivedQuantity\": 50\n        }\n    ],\n    \"notes\": \"All 50 units inspected and verified intact\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/shipments/{{shipmentId}}/verify",
+							"host": ["{{baseUrl}}"],
+							"path": ["shipments", "{{shipmentId}}", "verify"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "6. User Profile",
+			"item": [
+				{
+					"name": "View Profile (GET /viewprofile)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/viewprofile",
+							"host": ["{{baseUrl}}"],
+							"path": ["viewprofile"]
+						}
+					}
+				},
+				{
+					"name": "Update Profile (PUT /updateprofile)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{managerToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Alice Manager Senior\",\n    \"mobile\": 9998887776\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/updateprofile",
+							"host": ["{{baseUrl}}"],
+							"path": ["updateprofile"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
