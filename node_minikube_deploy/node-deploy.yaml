@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    release: beta
+    type: gateway-poc
+  name: apigateway-login-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: gateway-poc
+  template:
+    metadata:
+      labels:
+        release: beta
+        type: gateway-poc
+        name: gateway-login-pod
+    spec:
+      containers:
+        - image: "choupvirakyuth/api-act9:v1.0"
+          name: api-gateway-container
+          ports:
+            - containerPort: 4000
+          env:
+            - name: LOGIN_URL
+              value: "http://localhost:5002"
+            - name: REGISTRATION_URL
+              value: "http://registration-service:5001"
+        - image: "choupvirakyuth/loginact9:v1.0"
+          name: login-container
+          ports:
+            - containerPort: 5002
+          env:
+            - name: JWT_SECRETE
+              value: "347186591486#^%%ABCF*##GHE"
+            - name: MONGO_URI
+              value: "mongodb+srv://2025340choup_db_user:yuth1407@cluster0.5lt6slh.mongodb.net/cloudmongo1?appName=Cluster0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    release: beta
+    type: registration-poc
+  name: registration-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: registration-poc
+  template:
+    metadata:
+      labels:
+        release: beta
+        type: registration-poc
+        name: registration-pod
+    spec:
+      containers:
+        - image: "choupvirakyuth/regact9:v1.0"
+          name: registration-container
+          ports:
+            - containerPort: 5001
